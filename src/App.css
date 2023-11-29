@@ -2,37 +2,160 @@
   text-align: center;
 }
 
-.App-logo {
-  height: 40vmin;
+#wheel {
+  position:fixed;
+  top: 15%;
+  left: 35%;
+  /* height: 40vmin; */
   pointer-events: none;
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
+  #wheel {
+    animation: wheel-spin infinite 20s linear;
   }
 }
 
 .App-header {
-  background-color: #282c34;
-  min-height: 100vh;
+  background: linear-gradient(217deg, rgba(128, 0, 255, 0.8), rgba(136, 0, 255, 0) 70.71%),
+            linear-gradient(127deg, #711666fb, rgba(0,255,0,0) 70.71%),
+            linear-gradient(336deg, rgba(0,0,255,.8), rgba(0,0,255,0) 70.71%);
+            min-height: 100vh;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   font-size: calc(10px + 2vmin);
-  color: white;
+  color: rgb(42, 12, 72);
+}
+h1{
+  position: fixed;
+  top: 20px;
+  z-index: 1;
 }
 
-.App-link {
-  color: #61dafb;
+#Play {
+  margin-top: 550px;
+  padding: 10px 20px;
+  font-size: 30px;
+  cursor: pointer;
+  background-color: transparent;
+  color: rgb(85, 0, 128);
+  border: 2px solid rgb(85, 0, 128);
+  border-radius: 5px;
 }
 
-@keyframes App-logo-spin {
+#hidden{
+  margin-top: 150px;
+}
+
+#container{
+  margin-top: 420px;
+  margin-left: 20px;
+  margin-right: 20px;
+  flex: 1;
+}
+
+#records{
+  display: flex;
+  flex-direction: row;
+  position: absolute;
+  top: 100px;
+  left: 0; 
+  right: 0; 
+  /* height: 500px;  */
+  justify-content: space-between; 
+}
+
+#userrecords{
+  margin-left: 30px;
+  border: 1px solid #000; 
+  height: 400px; 
+  overflow-y: auto;
+  padding: 10px; 
+}
+#allrecords{
+  margin-right: 30px;
+  border: 1px solid #000; 
+  height: 400px; 
+  overflow-y: auto;
+  padding: 10px; 
+}
+
+#userrecords table th {
+  font-size: 18px; /* Adjust the font size for userID and score */
+}
+
+#allrecords table th {
+  font-size: 18px; /* Adjust the font size for userID and score */
+}
+
+.celebration-message {
+  animation: ribbon-fall 5s ease-in-out; /* Adjust the duration as needed */
+  color: #ffcc00; /* Change the color of the celebration message */
+}
+
+@keyframes wheel-spin {
   from {
     transform: rotate(0deg);
   }
   to {
     transform: rotate(360deg);
   }
+}
+
+@keyframes confettiFall {
+  0% {
+    transform: translateY(0) rotateZ(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(600px) rotateZ(720deg);
+    opacity: 0;
+  }
+}
+.confetti1 {
+  width: 10px;
+  height: 10px;
+  background-color: #e44d26;
+  position: absolute;
+  animation: confettiFall 5s ease-in-out infinite;
+  transform-origin: 0 0;
+  opacity: 0;
+}
+.confetti2 {
+  width: 10px;
+  height: 10px;
+  background-color: #e1e426;
+  position: absolute;
+  animation: confettiFall 5s ease-in-out infinite;
+  transform-origin: 0 0;
+  opacity: 0;
+}
+.confetti3 {
+  width: 10px;
+  height: 10px;
+  background-color: #269ee4;
+  position: absolute;
+  animation: confettiFall 5s ease-in-out infinite;
+  transform-origin: 0 0;
+  opacity: 0;
+}
+.confetti4 {
+  width: 10px;
+  height: 10px;
+  background-color: #6526e4;
+  position: absolute;
+  animation: confettiFall 5s ease-in-out infinite;
+  transform-origin: 0 0;
+  opacity: 0;
+}
+.confetti5 {
+  width: 10px;
+  height: 10px;
+  background-color: rgb(231, 119, 181);
+  position: absolute;
+  animation: confettiFall 5s ease-in-out infinite;
+  transform-origin: 0 0;
+  opacity: 0;
 }
