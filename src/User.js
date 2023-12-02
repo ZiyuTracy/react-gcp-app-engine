@@ -1,9 +1,11 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInWithRedirect, GoogleAuthProvider } from 'firebase/auth';
 import React, {  useState, useEffect } from 'react';
+import axios from 'axios';
 
 // LoginSuccessful is a function sent in by parent component
 function User({LoginEvent}) {
+	
 	const firebaseConfig = {
 		apiKey: "AIzaSyBDt4i9LMe0rYI-KQiDJdEjAuYhqa31VUo",
 		authDomain: "user-d95d5.firebaseapp.com",
@@ -42,6 +44,8 @@ function User({LoginEvent}) {
 		setLoggedUser(null)
 	}
 
+
+
 	// we put the onAuthStateChanged in useEffect so this is only called when 
 	// this component mounts  
 	useEffect(() => {
@@ -68,6 +72,7 @@ function User({LoginEvent}) {
       <>
       {/* <p>user: {loggedUser.uid}</p>  */}
       <button onClick={logoutGoogle}>Log out</button> 
+
       </>
       :<button onClick={signInWithGoogle}>Sign in with Google</button>
     } 

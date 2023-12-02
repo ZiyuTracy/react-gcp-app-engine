@@ -1,5 +1,6 @@
 import React, {useEffect, useState } from 'react';
 import User from './User';
+import axios from 'axios';
 import './App.css';
 
 function App() {
@@ -13,25 +14,87 @@ function App() {
   const [userGuess, setUserGuess] = useState('');
   const [guessedLetters, setGuessedLetters] = useState([]);
   const [feedback, setFeedback] = useState('');
-  const [currentScore, setCurrentScore] = useState(100);
-  const [userId, setUserId] = useState(''); // New state for user ID
-  const [loginId, setLoginId] = useState('');
+  const [score, setScore] = useState(100);
+  const [handle, setHandle] = useState(''); // New state for user ID
+  const [googleId, setGoogleId] = useState('');
   const [login, setLogin] = useState(false); // New state to track if ID is entered
   const [enterId, setEnteredId] = useState(false);
   const [feedbackId, setFeedbackId] = useState('');
   const [userRecords, setUserRecords] = useState([]);
   const [allRecords, setAllRecords] = useState([]);
+  const [playNxt, setPlayNxt] = useState(false);
+  const [error, setError] = useState(null);
+  const [users, setUsers] = useState([]);
+  const [gamePlayed, setGamePlayed] = useState(false);
+  const [userHandles, setUserHandles] = useState({});
 
-  function HandleLogin(user) {
-    if(user){
-      setLoginId(user.uid);
-      setLogin(true);
-    }else{
-      setLoginId('');
-      setLogin(false);
+
+  // useEffect(() => {
+  //   const fetchAllGameRecords = async () => {
+  //     try {
+  //       const response = await axios.get('https://wheeloffortune-406623.ue.r.appspot.com/findAllGames');
+  //       setAllRecords(response.data);
+  //     } catch (error) {
+  //       console.error('Error fetching all game records:', error);
+  //     }
+  //   };
+
+  //   fetchAllGameRecords();
+  // }, []);
+  const fetchAllGameRecords = async () => {
+    try {
+      const response = await axios.get('https://wheeloffortune-406623.ue.r.appspot.com/findAllGames');
+      setAllRecords(response.data);
+
+      // Extract unique Google IDs
+      const uniqueGoogleIds = Array.from(new Set(response.data.map(record => record.googleId)));
+
+      // Fetch user handles for each unique Google ID
+      const handlePromises = uniqueGoogleIds.map(async (googleId) => {
+        const userResponse = await axios.get(`https://wheeloffortune-406623.ue.r.appspot.com/findByGoogleId?googleId=${googleId}`);
+        return { googleId, handle: userResponse.data[0]?.handle || 'Unknown' };
+        console.log(userResponse);
+
+      });
+      
+      // Wait for all handle promises to resolve
+      const handles = await Promise.all(handlePromises);
+
+      // Create a mapping of Google IDs to handles
+      const handlesMap = {};
+      handles.forEach((item) => {
+        handlesMap[item.googleId] = item.handle;
+      });
+
+      // Update the userHandles state
+      setUserHandles(handlesMap);
+    } catch (error) {
+      console.error('Error fetching all game records:', error);
     }
-    console.log("user id:", user.uid);
-	}
+  };
+
+  useEffect(() => {
+    fetchAllGameRecords();
+  }, []);
+
+  const HandleLogin = (user) => {
+    if (user) {
+      setGoogleId(user.uid);
+      setLogin(true);
+    } else {
+      setGoogleId('');
+      setLogin(false);
+      setEnteredId(false);
+    }
+
+  };
+
+  useEffect(() => {
+    if (googleId) {
+      fetchUserListByGoogleId();
+    }
+  }, [googleId]);
+
   
   const play = () => {
     if (!login){
@@ -46,31 +109,73 @@ function App() {
         setUserGuess('');
         setGuessedLetters([]);
         setFeedback('');
-        // setUserRecords((prevUserRecords) => [...prevUserRecords, newUserRecord]);
-
-        // // Update all records
-        // setAllRecords((prevAllRecords) => [...prevAllRecords, newUserRecord]);
-
-        // // Save records to local storage
-        // localStorage.setItem('userRecords', JSON.stringify(userRecords));
-        // localStorage.setItem('allRecords', JSON.stringify(allRecords));
-
-        // Clear user ID
-        setEnteredId(false);
-        setLoginId('');
-        setCurrentScore(100);
+        
+        
+        setScore(100);
       }
       setRandomPhrase(getRandomPhrase());
       setHiddenPhrase(getHiddenPhrase(randomPhrase));
       setShowImage(current => !current);
       setButtonText((prevText) => (prevText === 'Play it!' ? 'Quit Game' : 'Play it!'));
       setFeedbackId('');
+      setPlayNxt(false);
+      setGamePlayed(false);
       // setCurrentIndex(phrases.indexOf(randomPhrase));
     }
   };
+  async function save() {
+    if (!gamePlayed) {
+      console.log("play");
+      const postData = {
+        googleId,
+        handle,
+      };
+      const postGameData = {
+        googleId,
+        score,
+        date: new Date().toISOString().split('T')[0], 
+      };
+  
+      console.log(postGameData);
+      try {
+        await axios.post('https://wheeloffortune-406623.ue.r.appspot.com/saveUser', postData);
+        await axios.post('https://wheeloffortune-406623.ue.r.appspot.com/saveGame', postGameData);
+  
+        // Fetch the updated user record
+        const response = await axios.get(`https://wheeloffortune-406623.ue.r.appspot.com/findGameByGoogleId?googleId=${googleId}`);
+        setUserRecords(response.data);
+        // const allResponse = await axios.get('https://wheeloffortune-406623.ue.r.appspot.com/findAllGames');
+        // setAllRecords(allResponse.data);
+        fetchAllGameRecords();
+        setGamePlayed(true); // Set the gamePlayed state to true after saving
+      } catch (error) {
+        console.error('Error posting data:', error);
+      }
+    } else {
+      console.log('Game already played and saved.');
+    }
+  }
+  
+
+  const playnext = () => {
+    setRandomPhrase(getRandomPhrase());
+    setHiddenPhrase(getHiddenPhrase(randomPhrase));
+    setFeedbackId('');
+    setUserGuess('');
+    setGuessedLetters([]);
+    setFeedback('');
+    setScore(100);
+    setPlayNxt(false);
+    setGamePlayed(false);
+  }
 
   const handleIdChange = (event) => {
-    setUserId(event.target.value);
+    setHandle(event.target.value);
+    setEnteredId(true);
+  };
+
+  const newHandleIdChange = (event) => {
+    setHandle(event.target.value);
     setEnteredId(true);
   };
 
@@ -134,32 +239,79 @@ function App() {
         if (!updatedHiddenPhrase.includes('*')) {
           setFeedback('Congratulations! You win!');
           setShowConfetti(true);
+          setPlayNxt(true);
 
-          const newUserRecord = {
-          userId,
-          score: currentScore,
-          };
-          setUserRecords((prevUserRecords) => [...prevUserRecords, newUserRecord]);
-          // Update all records
-          setAllRecords((prevAllRecords) => [...prevAllRecords, newUserRecord]);
-
-          // Save records to local storage
-          localStorage.setItem('userRecords', JSON.stringify(userRecords));
-          localStorage.setItem('allRecords', JSON.stringify(allRecords));
-          
           setTimeout(() => {
             setShowConfetti(false);
           }, 3000); 
         }
       } else {
         setFeedback("It's not correct.");
-        setCurrentScore(currentScore-1)
+        setScore(score-1)
       }
 
       setGuessedLetters((prevGuessed) => [...prevGuessed, guessChar]);
       setUserGuess('');
     }
   }
+
+  const submit = async (event) => {
+    try {
+      const response = await axios.put(`https://wheeloffortune-406623.ue.r.appspot.com/updateHandle?googleId=${googleId}&newHandle=${handle}`);
+      fetchAllGameRecords();
+    } catch (error) {
+      console.error('Error updating handle:', error);
+    }
+  };
+
+  const deleteRecods = async (event) => {
+    try {
+      await axios.delete(`https://wheeloffortune-406623.ue.r.appspot.com/deleteByGoogleId?googleId=${googleId}`);
+      setUserRecords([]);
+      fetchAllGameRecords();
+    } catch (error) {
+      console.error('Error updating handle:', error);
+    }
+  };
+
+  // function findByGoogle() {
+  // 	axios.get(`https://wheeloffortune-406623.ue.r.appspot.com/findByGoogleId?googleId=${googleId}`)
+  //     .then(response => {
+  //       setUsers(response.data); 
+  //       console.log(users);
+  //       if (users.length()=== 0)
+  //       {setEnteredId(false);console.log("don't have handle")}// Axios packs the response in a 'data' property
+  //       else{setEnteredId(true); 
+  //         setHandle(users[0].handle); 
+  //         console.log("have handle");} 
+  //     })
+  //     .catch(error => {
+  //       setError(error.message);
+        
+  //     });
+  
+  // };
+  const fetchUserListByGoogleId = async () => {
+    try {
+      
+      const response = await axios.get(`https://wheeloffortune-406623.ue.r.appspot.com/findByGoogleId?googleId=${googleId}`);
+      const gameresponse = await axios.get(`https://wheeloffortune-406623.ue.r.appspot.com/findGameByGoogleId?googleId=${googleId}`);
+      setUserRecords(gameresponse.data);
+      const userList = response.data;
+      console.log(userList);
+      if (userList.length === 0) {
+        setEnteredId(false);
+        console.log("User ID not found");
+      } else {
+        setEnteredId(true);
+        setHandle(userList[0].handle);
+        console.log("User ID found");
+      }
+    } catch (error) {
+      setError(error.message);
+      console.error('Error fetching user list by Google ID:', error);
+    }
+  };
 
   return (
     <div className="App">
@@ -168,96 +320,120 @@ function App() {
         <div id = "records">
           <div id = "userrecords">
             <h3>User Records</h3>
+            <div id = "delete">
+            <button onClick={deleteRecods}>Delete</button>
+            </div>
+            {login&&
             <table>
               <thead>
                 <tr>
                   <th>User ID</th>
                   <th>Score</th>
+                  <th>Date</th>
                 </tr>
               </thead>
               <tbody>
-                {userRecords.map((record, index) => (
+                {userRecords
+                .slice() // Create a copy of the array
+                .sort((a, b) => b.score - a.score)
+                .map((record, index) => (
                   <tr key={index}>
-                    <td>{record.userId}</td>
+                    <td>{handle}</td>
                     <td>{record.score}</td>
+                    <td>{record.date}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
+            }
+        
           </div>
           <div id="wheel-container">
           {showImage ? (
             <>
+              <div id="image">
               <img id="wheel" src="https://thetrainingarcade.com/wp-content/uploads/2020/11/WOF-EXTENDED-logo.png" alt="Wheel of Fortune" width="400" height="400"/>
+              </div>
               <div id = "container">
-                <p>{feedbackId}</p>
+                {/* <p>{feedbackId}</p> */}
                 <div>
                 
                   <User LoginEvent={HandleLogin} />
-                  {userId}
       
                 </div>
-                {enterId? (
-                <p>User ID: {userId}</p>
-                
-                ):(
+                {login? (
+                <div>
+                  { enterId? (
+                  <div id = "enterId">
+                  <p>User ID: {handle}</p>
                   <div>
-                    <label>
-                      Enter your user ID:
-                      <input type="text" value={userId} onChange={handleIdChange} />
-                    </label>
-                 </div>
-                )}
+                      <label>
+                        Change your user ID:
+                        <input type="text"  onChange={newHandleIdChange} />
+                      </label>
+                      <button id="Submit" onClick={submit} stype="button">Submit</button>
+                    </div>
+                  </div>
+                  ):(
+                    <div>
+                      <label>
+                        Enter your user ID:
+                        <input type="text" value={handle} onChange={handleIdChange} />
+                      </label>
+                    </div>
+                  )}
+                </div>
                 
-              </div>
-            
+                ):(null)
+              }   
+              </div>  
             </>
             ) : (
             <> 
               <div id= "hidden" >
-                <p>User ID: {userId}</p>
-                {/* <p>{randomPhrase}</p> */}
-                <p id = "score"> Your current Score: {currentScore}</p>
+                <p>User ID: {handle}</p>
+                
+                <p id = "score"> Your current Score: {score}</p>
                 <p>Hidden Phrase: {hiddenPhrase}</p>
-                {/* <p>{feedback}</p> */}
+                
                 <p className={feedback.includes('Congratulations') ? 'celebration-message' : ''}>
                   {feedback}
                   {showConfetti && (
-            <>
-              {/* Add as many confetti elements as you want */}
-              <div className="confetti1" style={{ left: `${Math.random() * 100}vw` }}></div>
-              <div className="confetti2" style={{ left: `${Math.random() * 100}vw` }}></div>
-              <div className="confetti3" style={{ left: `${Math.random() * 100}vw` }}></div>
-              <div className="confetti4" style={{ left: `${Math.random() * 100}vw` }}></div>
-              <div className="confetti5" style={{ left: `${Math.random() * 100}vw` }}></div>
-              <div className="confetti1" style={{ left: `${Math.random() * 100}vw` }}></div>
-              <div className="confetti2" style={{ left: `${Math.random() * 100}vw` }}></div>
-              <div className="confetti3" style={{ left: `${Math.random() * 100}vw` }}></div>
-              <div className="confetti4" style={{ left: `${Math.random() * 100}vw` }}></div>
-              <div className="confetti5" style={{ left: `${Math.random() * 100}vw` }}></div>
-              <div className="confetti1" style={{ left: `${Math.random() * 100}vw` }}></div>
-              <div className="confetti2" style={{ left: `${Math.random() * 100}vw` }}></div>
-              <div className="confetti3" style={{ left: `${Math.random() * 100}vw` }}></div>
-              <div className="confetti4" style={{ left: `${Math.random() * 100}vw` }}></div>
-              <div className="confetti5" style={{ left: `${Math.random() * 100}vw` }}></div>
-              <div className="confetti1" style={{ left: `${Math.random() * 100}vw` }}></div>
-              <div className="confetti2" style={{ left: `${Math.random() * 100}vw` }}></div>
-              <div className="confetti3" style={{ left: `${Math.random() * 100}vw` }}></div>
-              <div className="confetti4" style={{ left: `${Math.random() * 100}vw` }}></div>
-              <div className="confetti5" style={{ left: `${Math.random() * 100}vw` }}></div>
-              <div className="confetti1" style={{ left: `${Math.random() * 100}vw` }}></div>
-              <div className="confetti2" style={{ left: `${Math.random() * 100}vw` }}></div>
-              <div className="confetti3" style={{ left: `${Math.random() * 100}vw` }}></div>
-              <div className="confetti4" style={{ left: `${Math.random() * 100}vw` }}></div>
-              <div className="confetti5" style={{ left: `${Math.random() * 100}vw` }}></div>
-              <div className="confetti1" style={{ left: `${Math.random() * 100}vw` }}></div>
-              <div className="confetti2" style={{ left: `${Math.random() * 100}vw` }}></div>
-              <div className="confetti3" style={{ left: `${Math.random() * 100}vw` }}></div>
-              <div className="confetti4" style={{ left: `${Math.random() * 100}vw` }}></div>
-              <div className="confetti5" style={{ left: `${Math.random() * 100}vw` }}></div>
-              {/* ... */}
-            </>
-          )}
+                    <>
+                      {/* Add as many confetti elements as you want */}
+                      <div className="confetti1" style={{ left: `${Math.random() * 100}vw` }}></div>
+                      <div className="confetti2" style={{ left: `${Math.random() * 100}vw` }}></div>
+                      <div className="confetti3" style={{ left: `${Math.random() * 100}vw` }}></div>
+                      <div className="confetti4" style={{ left: `${Math.random() * 100}vw` }}></div>
+                      <div className="confetti5" style={{ left: `${Math.random() * 100}vw` }}></div>
+                      <div className="confetti1" style={{ left: `${Math.random() * 100}vw` }}></div>
+                      <div className="confetti2" style={{ left: `${Math.random() * 100}vw` }}></div>
+                      <div className="confetti3" style={{ left: `${Math.random() * 100}vw` }}></div>
+                      <div className="confetti4" style={{ left: `${Math.random() * 100}vw` }}></div>
+                      <div className="confetti5" style={{ left: `${Math.random() * 100}vw` }}></div>
+                      <div className="confetti1" style={{ left: `${Math.random() * 100}vw` }}></div>
+                      <div className="confetti2" style={{ left: `${Math.random() * 100}vw` }}></div>
+                      <div className="confetti3" style={{ left: `${Math.random() * 100}vw` }}></div>
+                      <div className="confetti4" style={{ left: `${Math.random() * 100}vw` }}></div>
+                      <div className="confetti5" style={{ left: `${Math.random() * 100}vw` }}></div>
+                      <div className="confetti1" style={{ left: `${Math.random() * 100}vw` }}></div>
+                      <div className="confetti2" style={{ left: `${Math.random() * 100}vw` }}></div>
+                      <div className="confetti3" style={{ left: `${Math.random() * 100}vw` }}></div>
+                      <div className="confetti4" style={{ left: `${Math.random() * 100}vw` }}></div>
+                      <div className="confetti5" style={{ left: `${Math.random() * 100}vw` }}></div>
+                      <div className="confetti1" style={{ left: `${Math.random() * 100}vw` }}></div>
+                      <div className="confetti2" style={{ left: `${Math.random() * 100}vw` }}></div>
+                      <div className="confetti3" style={{ left: `${Math.random() * 100}vw` }}></div>
+                      <div className="confetti4" style={{ left: `${Math.random() * 100}vw` }}></div>
+                      <div className="confetti5" style={{ left: `${Math.random() * 100}vw` }}></div>
+                      <div className="confetti1" style={{ left: `${Math.random() * 100}vw` }}></div>
+                      <div className="confetti2" style={{ left: `${Math.random() * 100}vw` }}></div>
+                      <div className="confetti3" style={{ left: `${Math.random() * 100}vw` }}></div>
+                      <div className="confetti4" style={{ left: `${Math.random() * 100}vw` }}></div>
+                      <div className="confetti5" style={{ left: `${Math.random() * 100}vw` }}></div>
+                      {/* ... */}
+                    </>
+                  )}
                 </p>
                 <label>
                   Guess:   
@@ -270,27 +446,7 @@ function App() {
             </>
           )}
           </div>
-      
-          {/* <div id = "records"> */}
-          {/* <div id = "userrecords">
-            <h3>User Records</h3>
-            <table>
-              <thead>
-                <tr>
-                  <th>User ID</th>
-                  <th>Score</th>
-                </tr>
-              </thead>
-              <tbody>
-                {userRecords.map((record, index) => (
-                  <tr key={index}>
-                    <td>{record.userId}</td>
-                    <td>{record.score}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div> */}
+  
           <div id = "allrecords">
             <h3>All Records</h3>
             <table>
@@ -298,13 +454,18 @@ function App() {
                 <tr>
                   <th>User ID</th>
                   <th>Score</th>
+                  <th>Date</th>
                 </tr>
               </thead>
               <tbody>
-                {allRecords.map((record, index) => (
+              {allRecords
+                .slice() // Create a copy of the array
+                .sort((a, b) => b.score - a.score)
+                .map((record, index) => (
                   <tr key={index}>
-                    <td>{record.userId}</td>
+                    <td>{userHandles[record.googleId] || 'Unknown'}</td>
                     <td>{record.score}</td>
+                    <td>{record.date}</td>
                   </tr>
                 ))}
               </tbody>
@@ -312,9 +473,19 @@ function App() {
           </div>
           
         </div>
+        {playNxt && (
+          <>
+          <button id="Save" onClick={save} stype="button">Save</button>
+          <button id="PlayNext" onClick={playnext} stype="button">Play Next</button>
+        
+          </>
+          
+        )}
+        
         <button id="Play" onClick={play} stype="button">
           {buttonText}
-          </button>
+        </button>
+        
       </header>
     </div>
 
