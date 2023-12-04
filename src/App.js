@@ -29,18 +29,7 @@ function App() {
   const [userHandles, setUserHandles] = useState({});
 
 
-  // useEffect(() => {
-  //   const fetchAllGameRecords = async () => {
-  //     try {
-  //       const response = await axios.get('https://wheeloffortune-406623.ue.r.appspot.com/findAllGames');
-  //       setAllRecords(response.data);
-  //     } catch (error) {
-  //       console.error('Error fetching all game records:', error);
-  //     }
-  //   };
 
-  //   fetchAllGameRecords();
-  // }, []);
   const fetchAllGameRecords = async () => {
     try {
       const response = await axios.get('https://wheeloffortune-406623.ue.r.appspot.com/findAllGames');
@@ -73,10 +62,12 @@ function App() {
     }
   };
 
+  // get all game records
   useEffect(() => {
     fetchAllGameRecords();
   }, []);
 
+  //update gooogle id and login status when user login
   const HandleLogin = (user) => {
     if (user) {
       setGoogleId(user.uid);
@@ -89,6 +80,7 @@ function App() {
 
   };
 
+  //get user records when user login
   useEffect(() => {
     if (googleId) {
       fetchUserListByGoogleId();
@@ -120,9 +112,11 @@ function App() {
       setFeedbackId('');
       setPlayNxt(false);
       setGamePlayed(false);
-      // setCurrentIndex(phrases.indexOf(randomPhrase));
+      
     }
   };
+
+  // save handle name and score to user database and game database
   async function save() {
     if (!gamePlayed) {
       console.log("play");
@@ -144,7 +138,7 @@ function App() {
         // Fetch the updated user record
         const response = await axios.get(`https://wheeloffortune-406623.ue.r.appspot.com/findGameByGoogleId?googleId=${googleId}`);
         setUserRecords(response.data);
-        // const allResponse = await axios.get('https://wheeloffortune-406623.ue.r.appspot.com/findAllGames');
+        
         // setAllRecords(allResponse.data);
         fetchAllGameRecords();
         setGamePlayed(true); // Set the gamePlayed state to true after saving
@@ -156,7 +150,7 @@ function App() {
     }
   }
   
-
+  //after succeeding, play next game, reintilize varaibles
   const playnext = () => {
     setRandomPhrase(getRandomPhrase());
     setHiddenPhrase(getHiddenPhrase(randomPhrase));
@@ -169,19 +163,23 @@ function App() {
     setGamePlayed(false);
   }
 
+  //get handle from new user
   const handleIdChange = (event) => {
     setHandle(event.target.value);
     setEnteredId(true);
   };
 
+  //update new handle
   const newHandleIdChange = (event) => {
     setHandle(event.target.value);
     setEnteredId(true);
   };
 
+  //get guess
   const handleGuessChange = (event) => {
     setUserGuess(event.target.value);
   };
+
 
   useEffect(() => {
     // Fetch phrases from the server (replace with your server URL or local path)
@@ -192,20 +190,24 @@ function App() {
       // console.log(phrases)
   }, []);
 
+  // get hidden phrase
   useEffect(() => {
     setHiddenPhrase(getHiddenPhrase(randomPhrase));
   }, [randomPhrase]);
 
+  //get random phrase
   function getRandomPhrase() {
     const randomIndex = Math.floor(Math.random() * phrases.length);
     return phrases[randomIndex];
   }
 
+  //replace charactor by star
   function getHiddenPhrase(p) {
     return p.replace(/[a-zA-Z]/g, '*');
 
   }
 
+  // check guess
   function check() {
     if (userGuess.length === 1 && /^[a-zA-Z]$/.test(userGuess)) {
       const guessChar = userGuess.toLowerCase();
@@ -255,6 +257,7 @@ function App() {
     }
   }
 
+  //update new handle in database
   const submit = async (event) => {
     try {
       const response = await axios.put(`https://wheeloffortune-406623.ue.r.appspot.com/updateHandle?googleId=${googleId}&newHandle=${handle}`);
@@ -264,6 +267,7 @@ function App() {
     }
   };
 
+  // delete all user records
   const deleteRecods = async (event) => {
     try {
       await axios.delete(`https://wheeloffortune-406623.ue.r.appspot.com/deleteByGoogleId?googleId=${googleId}`);
@@ -274,23 +278,7 @@ function App() {
     }
   };
 
-  // function findByGoogle() {
-  // 	axios.get(`https://wheeloffortune-406623.ue.r.appspot.com/findByGoogleId?googleId=${googleId}`)
-  //     .then(response => {
-  //       setUsers(response.data); 
-  //       console.log(users);
-  //       if (users.length()=== 0)
-  //       {setEnteredId(false);console.log("don't have handle")}// Axios packs the response in a 'data' property
-  //       else{setEnteredId(true); 
-  //         setHandle(users[0].handle); 
-  //         console.log("have handle");} 
-  //     })
-  //     .catch(error => {
-  //       setError(error.message);
-        
-  //     });
-  
-  // };
+
   const fetchUserListByGoogleId = async () => {
     try {
       
